@@ -234,14 +234,14 @@ void CheckPreviousShader(bool makeGraph)
     if (previousShader.id > 0)
     {
         shader = previousShader;
-        model.material.shader = shader;
+        model.materials[0].shader = shader;
         viewUniform = GetShaderLocation(shader, "viewDirection");
         transformUniform = GetShaderLocation(shader, "modelMatrix");
         timeUniformV = GetShaderLocation(shader, "vertCurrentTime");
         timeUniformF = GetShaderLocation(shader, "fragCurrentTime");
 
         shader.locs[LOC_MAP_ROUGHNESS] = glGetUniformLocation(shader.id, "texture3");
-        shader.locs[LOC_MAP_OCCUSION] = glGetUniformLocation(shader.id, "texture4");
+        shader.locs[LOC_MAP_OCCLUSION] = glGetUniformLocation(shader.id, "texture4");
         shader.locs[LOC_MAP_EMISSION] = glGetUniformLocation(shader.id, "texture5");
         shader.locs[LOC_MAP_HEIGHT] = glGetUniformLocation(shader.id, "texture6");
         shader.locs[LOC_MAP_BRDF] = glGetUniformLocation(shader.id, "texture7");
@@ -391,12 +391,12 @@ void LoadDefaultProject(void)
             {
                 SetTextureFilter(textures[i], FILTER_BILINEAR);
                 texPaths[i] = MODEL_TEXTURE_WINDAMOUNT;
-                model.material.maps[i].texture = textures[i];
+                model.materials[0].maps[i].texture = textures[i];
             }
         }
 
         shader = previousShader;
-        model.material.shader = shader;
+        model.materials[0].shader = shader;
         viewUniform = GetShaderLocation(shader, "viewDirection");
         transformUniform = GetShaderLocation(shader, "modelMatrix");
         timeUniformV = GetShaderLocation(shader, "vertCurrentTime");
@@ -1245,7 +1245,7 @@ void UpdateShaderData(void)
 
                 if (shader.id > 0)
                 {
-                    model.material.maps[index].texture = textures[index];
+                    model.materials[0].maps[index].texture = textures[index];
                     SetTextureFilter(textures[index], FILTER_BILINEAR);
                 }
 
@@ -1256,15 +1256,15 @@ void UpdateShaderData(void)
         else if (CheckModelExtension(droppedFiles[0]) && !loadedModel)
         {
             model = LoadModel(droppedFiles[0]);
-            model.material.shader = shader;
+            model.materials[0].shader = shader;
 
             for (int i = 0; i < MAX_TEXTURES; i++)
             {
                 if (textures[i].id != 0)
                 {
-                    model.material.maps[i].texture = textures[i];
-                    model.material.maps[i].color = WHITE;
-                    model.material.maps[i].value = 1.0f;
+                    model.materials[0].maps[i].texture = textures[i];
+                    model.materials[0].maps[i].color = WHITE;
+                    model.materials[0].maps[i].value = 1.0f;
                 }
             }
 
@@ -1396,7 +1396,7 @@ void CompileShader(void)
     remove(VERTEX_PATH);
     remove(FRAGMENT_PATH);
 
-    model.material.shader = GetShaderDefault();
+    model.materials[0].shader = GetShaderDefault();
     for (int i = 0; i < MAX_TEXTURES; i++) usedUnits[i] = false;
     viewUniform = -1;
     transformUniform = -1;
@@ -1406,10 +1406,16 @@ void CompileShader(void)
     compileState = -1;
     compileFrame = 0;
 
+    //TraceLogFNode(true, "OUTPUT %s", DATA_PATH);
+    //TraceLogFNode(true, "OUTPUT %s", DATA_PATH);
+
     // Open shader data file
     FILE *dataFile = fopen(DATA_PATH, "w");
+    //TraceLogFNode(true, "OUTPUT %s", DATA_PATH);
     if (dataFile != NULL)
     {
+        //TraceLogFNode(true, "OUTPUT START %s", DATA_PATH);
+
         // Nodes data reading
         int count = 0;
         for (int i = 0; i < MAX_NODES; i++)
@@ -1462,9 +1468,13 @@ void CompileShader(void)
             if (count == linesCount) break;
         }
 
+        //TraceLogFNode(true, "OUTPUT DONE %s", DATA_PATH);
+
         fclose(dataFile);
     }
     else TraceLogFNode(true, "error when trying to open and write in data file");
+
+    //TraceLogFNode(true, "OUTPUT2 %s", VERTEX_PATH);
 
     // Open vertex shader file to write data
     FILE *vertexFile = fopen(VERTEX_PATH, "w");
@@ -2057,24 +2067,24 @@ void DrawCanvas(void)
             DrawText("FNODE 1.0", (screenSize.x - MeasureText("FNODE 1.0", 120))/2, screenSize.y/2 - 60, 120, Fade(LIGHTGRAY, UI_GRID_ALPHA*2));
             DrawText("VICTOR FISAC", (screenSize.x - MeasureText("VICTOR FISAC", 40))/2, screenSize.y*0.65f - 20, 40, Fade(LIGHTGRAY, UI_GRID_ALPHA*2));
 
-            Begin2dMode(camera);
+            BeginMode2D(camera);
 
                 DrawCanvasGrid(UI_GRID_COUNT);
 
-            End2dMode();
+            EndMode2D();
 
         EndTextureMode();
 
         DrawTexturePro(gridTarget.texture, (Rectangle){ 0, 0, gridTarget.texture.width, -gridTarget.texture.height }, (Rectangle){ 0, 0, screenSize.x, screenSize.y }, (Vector2){ 0, 0 }, 0, WHITE);
 
-        Begin2dMode(camera);
+        BeginMode2D(camera);
 
             // Draw all created comments, lines and nodes
             for (int i = 0; i < commentsCount; i++) DrawComment(comments[i]);
             for (int i = 0; i < nodesCount; i++) DrawNode(nodes[i]);
             for (int i = 0; i < linesCount; i++) DrawNodeLine(lines[i]);
 
-        End2dMode();
+        EndMode2D();
 
     EndShaderMode();
 }
@@ -2114,13 +2124,13 @@ void DrawVisor(void)
         DrawText("FNODE 1.0", (screenSize.x - MeasureText("FNODE 1.0", 120))/2, screenSize.y/2 - 60, 120, Fade(LIGHTGRAY, UI_GRID_ALPHA*2));
         DrawText("VICTOR FISAC", (screenSize.x - MeasureText("VICTOR FISAC", 40))/2, screenSize.y*0.65f - 20, 40, Fade(LIGHTGRAY, UI_GRID_ALPHA*2));
 
-        BeginShaderMode(model.material.shader);
+        BeginShaderMode(model.materials[0].shader);
 
-            Begin3dMode(camera3d);
+            BeginMode3D(camera3d);
 
                 DrawModelEx(model, (Vector3){ 0.0f, -1.0f, 0.0f }, (Vector3){ 0, 1, 0 }, modelRotation, (Vector3){ VISOR_MODEL_SCALE, VISOR_MODEL_SCALE, VISOR_MODEL_SCALE }, WHITE);
 
-            End3dMode();
+            EndMode3D();
 
         EndShaderMode();
 
@@ -2191,7 +2201,7 @@ void DrawInterface(void)
         if (InterfaceButton((Rectangle){ layoutRect.x + layoutRect.width - 30, layoutRect.y + 4, 22, 22 }, "X"))
         {
             loadedModel = false;
-            UnloadMesh(&model.mesh);
+            UnloadMesh(&model.meshes[0]);
 
             for (int i = 0; i < MAX_TEXTURES; i++)
             {
@@ -2554,7 +2564,7 @@ int main(void)
 
     // Load resources
     model = LoadModel(MODEL_PATH);
-    if (model.mesh.vertexCount > 0) loadedModel = true;
+    if (model.meshes[0].vertexCount > 0) loadedModel = true;
     visorTarget = LoadRenderTexture(screenSize.x/4, screenSize.y/4);
     gridTarget = LoadRenderTexture(screenSize.x, screenSize.y);
     fxaa = LoadShader(FXAA_VERTEX, FXAA_FRAGMENT);
